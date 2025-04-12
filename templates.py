@@ -9,7 +9,7 @@ list_of_files = [
     "backend/ingest_data.py", 
     "backend/model.py" 
     "app.py", 
-    "requirements.txt", 
+     
     "templates/index.html", 
     ".env", 
     "Dockerfile",
