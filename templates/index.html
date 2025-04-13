@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productivity Plan Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 h-screen flex flex-col">
+    <header class="bg-indigo-600 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">My Productivity Assistant</h1>
+            <button id="reloadBtn" class="bg-indigo-700 hover:bg-indigo-800 px-4 py-2 rounded-md flex items-center">
+                <i class="fas fa-sync-alt mr-2"></i> Reload Document
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 container mx-auto p-4 flex flex-col">
+        <div id="chatContainer" class="flex-1 bg-white rounded-lg shadow-md p-4 mb-4 overflow-y-auto space-y-4">
+            <!-- Welcome message -->
+            <div class="flex justify-start">
+                <div class="bg-indigo-100 rounded-lg p-4 max-w-3xl">
+                    <p class="font-semibold text-indigo-800">Productivity Assistant</p>
+                    <p>Hello! I can help you find information in your Personal Productivity Plan. Ask me anything about your priorities, projects, or goals.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <form id="chatForm" class="flex space-x-2">
+                <input 
+                    type="text" 
+                    id="userInput" 
+                    placeholder="Ask about your productivity plan..." 
+                    class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    autocomplete="off"
+                >
+                <button 
+                    type="submit" 
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg flex items-center"
+                >
+                    <i class="fas fa-paper-plane mr-2"></i> Send
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatForm = document.getElementById('chatForm');
+            const userInput = document.getElementById('userInput');
+            const chatContainer = document.getElementById('chatContainer');
+            const reloadBtn = document.getElementById('reloadBtn');
+
+            // Add user message to chat
+            function addUserMessage(message) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'flex justify-end';
+                messageDiv.innerHTML = `
+                    <div class="bg-indigo-600 text-white rounded-lg p-4 max-w-3xl">
+                        <p>${message}</p>
+                    </div>
+                `;
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            // Add bot message to chat
+            function addBotMessage(message, sources = []) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'flex justify-start';
+                
+                let sourcesHTML = '';
+                if (sources && sources.length > 0) {
+                    sourcesHTML = `
+                        <div class="mt-3 text-xs text-gray-600">
+                            <p class="font-semibold">Sources:</p>
+                            <ul class="list-disc pl-5">
+                                ${sources.map(src => `<li>Page ${src.page || 'N/A'}: ${src.source || 'Document'}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+                
+                messageDiv.innerHTML = `
+                    <div class="bg-indigo-100 rounded-lg p-4 max-w-3xl">
+                        <p class="font-semibold text-indigo-800">Productivity Assistant</p>
+                        <p>${message}</p>
+                        ${sourcesHTML}
+                    </div>
+                `;
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            // Handle form submission
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const message = userInput.value.trim();
+                if (!message) return;
+
+                addUserMessage(message);
+                userInput.value = '';
+                userInput.focus();
+
+                try {
+                    const response = await fetch('/query', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: message })
+                    });
+
+                    const data = await response.json();
+                    addBotMessage(data.answer, data.sources);
+                } catch (error) {
+                    addBotMessage("Sorry, I encountered an error processing your request.");
+                    console.error('Error:', error);
+                }
+            });
+
+            // Handle document reload
+            reloadBtn.addEventListener('click', async () => {
+                reloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Reloading...';
+                reloadBtn.disabled = true;
+                
+                try {
+                    const response = await fetch('/reload', {
+                        method: 'POST'
+                    });
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        addBotMessage("Document has been successfully reloaded!");
+                    } else {
+                        addBotMessage("Error reloading document: " + data.message);
+                    }
+                } catch (error) {
+                    addBotMessage("Error reloading document.");
+                    console.error('Error:', error);
+                } finally {
+                    reloadBtn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Reload Document';
+                    reloadBtn.disabled = false;
+                }
+            });
+
+            // Allow pressing Enter to submit (but handle Shift+Enter for new lines)
+            userInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    chatForm.dispatchEvent(new Event('submit'));
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO,format='[%(asctime)s]:%(message)s:')
 list_of_files = [
     ".github/workflows/.gitkeep", 
     "backend/ingest_data.py", 
-    "backend/model.py" 
+    "backend/model.py", 
     "app.py", 
      
     "templates/index.html", 
